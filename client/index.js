@@ -1,23 +1,53 @@
+
 if (Meteor.isClient) {
-  // counter starts at 0
-  Session.setDefault('counter', 0);
+Tasks = new Mongo.Collection('tasks');
 
-  Template.hello.helpers({
-    counter: function () {
-      return Session.get('counter');
-    }
-  });
+    angular.module('mix4u', ['angular-meteor']);
 
-  Template.hello.events({
-    'click button': function () {
-      // increment the counter when button is clicked
-      Session.set('counter', Session.get('counter') + 1);
-    }
-  });
+    angular.module('mix4u').controller('AppController', ['$scope', '$meteorCollection',
+        function($scope, $meteor) {
+
+            $scope.tasks = $scope.$meteorCollection(Tasks,true);
+
+            $scope.addTask = function(newTask) {
+                $scope.tasks.push({
+                    text: newTask,
+                    createdAt: new Date()
+                });
+            };
+
+        }
+    ]);
+
+    Accounts.ui.config({
+        passwordSignupFields: "USERNAME_ONLY"
+    });
+
+    Meteor.methods({
+        addTask: function(text) {
+            // Make sure the user is logged in before inserting a task
+            if (!Meteor.userId()) {
+                throw new Meteor.Error("not-authorized");
+            }
+
+            Tasks.insert({
+                text: text,
+                createdAt: new Date(),
+                owner: Meteor.userId(),
+                username: Meteor.user().username
+            });
+        },
+        deleteTask: function(taskId) {
+            Tasks.remove(taskId);
+        },
+        setChecked: function(taskId, setChecked) {
+            Tasks.update(taskId, {
+                $set: {
+                    checked: setChecked
+                }
+            });
+        }
+    });
+
 }
 
-if (Meteor.isServer) {
-  Meteor.startup(function () {
-    // code to run on server at startup
-  });
-}
